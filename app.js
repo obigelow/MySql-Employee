@@ -1,5 +1,6 @@
 var mysql = require("mysql");
 var inquirer = require("inquirer");
+const util = require("util")
 
 var connection = mysql.createConnection({
     host: "localhost",
@@ -89,6 +90,21 @@ function querySearch() {
         });
 }
 
+ function getId(array, table, answer) {
+    connection.query("SELECT * FROM ??", [table], function (err, res) {
+        if (err) throw err;
+        for (let i = 0; i < res.length; i++) {
+            if (answer.role === res[i].title) {
+                array.push(res[i].id)
+            }
+            console.log(array)
+        }
+        return array
+    })
+}
+
+const promiseId = util.promisify(getId)
+
 function addEmployee() {
     inquirer
         .prompt([
@@ -108,20 +124,19 @@ function addEmployee() {
                 message: "What is your employee's role?"
             },
         ])
-        .then( async function (answer) {
-            connection.query("SELECT * FROM role", function (err, res) {
-                if (err) throw err;
-                for (let i = 0; i < res.length; i++){
-                    if (answer.role === res.title){
-                        console.log("hello")
-                    }
-                }
-            });
-            var queryEmployee = "INSERT INTO employee SET ?";
-            connection.query(queryEmployee, { first_name: answer.first, last_name: answer.last, role_id: 1, department_id: 1 }, function (err, res) {
-                if (err) throw err;
-                querySearch();
-            });
+        .then(function (answer) {
+            const idArray = []
+            console.log("console logging")
+            promiseId(idArray, "role", answer)
+                .then(function (arr) {
+                    console.log(arr)
+                    var queryEmployee = "INSERT INTO employee SET ?";
+                    connection.query(queryEmployee, { first_name: answer.first, last_name: answer.last, role_id: idArray[0], department_id: 1 }, function (err, res) {
+                        if (err) throw err;
+                        querySearch();
+                    });
+                })
+
         });
 }
 
@@ -223,18 +238,24 @@ function removeDepartment() {
 
 function viewEmployee() {
 
-    var queryEmployee = "SELECT * FROM employee";
+    var queryEmployee = `SELECT first_name, last_name, title, salary, name
+    FROM employee
+    INNER JOIN role 
+    ON employee.role_id = role.id
+    INNER JOIN department
+    ON employee.department_id = department.id`;
     connection.query(queryEmployee, function (err, res) {
         if (err) throw err;
         console.log(res)
         querySearch();
     });
 
+
 }
 
 function viewRole() {
 
-    var queryRole = "SELECT * FROM role";
+    var queryRole = `SELECT * FROM role`;
     connection.query(queryRole, function (err, res) {
         if (err) throw err;
         console.log(res)
