@@ -94,7 +94,7 @@ function querySearch() {
     connection.query("SELECT * FROM ??", [table], function (err, res) {
         if (err) throw err;
         for (let i = 0; i < res.length; i++) {
-            if (answer.role === res[i].title) {
+            if (answer.name === res[i].title) {
                 array.push(res[i].id)
             }
             console.log(array)
@@ -123,11 +123,19 @@ function addEmployee() {
                 type: "input",
                 message: "What is your employee's role?"
             },
+            {
+                name: "department",
+                type: "input",
+                message: "What is your employee's department?"
+            },
         ])
         .then(function (answer) {
             const idArray = []
+            const departmentArray = []
             console.log("console logging")
             promiseId(idArray, "role", answer)
+            .then(function(){ promiseId(departmentArray, "department", answer)
+        })
                 .then(function (arr) {
                     console.log(arr)
                     var queryEmployee = "INSERT INTO employee SET ?";
