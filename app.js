@@ -90,20 +90,7 @@ function querySearch() {
         });
 }
 
- function getId(array, table, answer) {
-    connection.query("SELECT * FROM ??", [table], function (err, res) {
-        if (err) throw err;
-        for (let i = 0; i < res.length; i++) {
-            if (answer.name === res[i].title) {
-                array.push(res[i].id)
-            }
-            console.log(array)
-        }
-        return array
-    })
-}
 
-const promiseId = util.promisify(getId)
 
 function addEmployee() {
     inquirer
@@ -133,18 +120,29 @@ function addEmployee() {
             const idArray = []
             const departmentArray = []
             console.log("console logging")
-            promiseId(idArray, "role", answer)
-            .then(function(){ promiseId(departmentArray, "department", answer)
-        })
-                .then(function (arr) {
-                    console.log(arr)
+            connection.query("SELECT * FROM ??", ["role"], function (err, res) {
+                if (err) throw err;
+                for (let i = 0; i < res.length; i++) {
+                    if (answer.role === res[i].title) {
+                        idArray.push(res[i].id)
+                    }
+                    console.log(idArray)
+                }
+                connection.query("SELECT * FROM ??", ["department"], function (err, res) {
+                    if (err) throw err;
+                    for (let i = 0; i < res.length; i++) {
+                        if (answer.department === res[i].name) {
+                            departmentArray.push(res[i].id)
+                        }
+                        console.log(departmentArray)
+                    }
                     var queryEmployee = "INSERT INTO employee SET ?";
-                    connection.query(queryEmployee, { first_name: answer.first, last_name: answer.last, role_id: idArray[0], department_id: 1 }, function (err, res) {
+                    connection.query(queryEmployee, { first_name: answer.first, last_name: answer.last, role_id: idArray[0], department_id: departmentArray[0] }, function (err, res) {
                         if (err) throw err;
                         querySearch();
                     });
                 })
-
+            })
         });
 }
 
@@ -163,11 +161,24 @@ function addRole() {
             },
         ])
         .then(function (answer) {
-            var queryRole = "INSERT INTO role SET ?";
-            connection.query(queryRole, { title: answer.role, salary: answer.salary, department_id: 1 }, function (err, res) {
+            const idArray = []
+            console.log("console logging")
+            connection.query("SELECT * FROM ??", ["department"], function (err, res) {
                 if (err) throw err;
-                querySearch();
-            });
+                for (let i = 0; i < res.length; i++) {
+                    if (answer.department === res[i].title) {
+                        idArray.push(res[i].id)
+                    }
+                    console.log(idArray)
+                }
+
+                var queryRole = "INSERT INTO role SET ?";
+                connection.query(queryRole, { title: answer.role, salary: answer.salary, department_id: idArray[0] }, function (err, res) {
+                    if (err) throw err;
+                    querySearch();
+                });
+
+            })
         });
 }
 
@@ -263,12 +274,17 @@ function viewEmployee() {
 
 function viewRole() {
 
-    var queryRole = `SELECT * FROM role`;
+
+    var queryRole = `SELECT title, salary, name
+    FROM role
+    INNER JOIN department 
+    ON department.id = role.department_id`;
     connection.query(queryRole, function (err, res) {
         if (err) throw err;
         console.log(res)
         querySearch();
     });
+
 
 }
 
